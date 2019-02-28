@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#f1f1f1"
+    tools:context=".ProjectEditorActivity">
+
+    <com.arduk.animationcreator.DrawView
+        android:id="@+id/draw_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/frameRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_marginBottom="0dp"
+        android:background="@color/transparent"
+        android:elevation="8dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/frame_button_linear_layout"
+        tools:layout_editor_absoluteX="0dp">
+
+
+    </android.support.v7.widget.RecyclerView>
+
+    <TextView
+        android:id="@+id/debug_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="8dp"
+        android:layout_marginStart="8dp"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_editor_absoluteY="10dp" />
+
+    <!-- tools -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="88dp"
+        android:padding="0dp"
+        android:weightSum="2"
+        android:background="@color/colorLight"
+        android:elevation="12dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="@+id/draw_view"
+        app:layout_constraintHorizontal_bias="0.478"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/draw_view">
+
+        <ImageButton
+            android:id="@+id/brush_tool_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_brush_36px" />
+
+        <ImageButton
+            android:id="@+id/erase_tool_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_edit_upside_down_36px" />
+
+        <!--
+        <ImageButton
+            android:id="@+id/bucket_tool_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_format_color_fill_36px" />
+
+        <ImageButton
+            android:id="@+id/lasso_tool_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_select_all_36px" />
+        -->
+
+    </LinearLayout>
+
+
+    <!-- undo buttons and tool settings -->
+    <RelativeLayout
+        android:id="@+id/relative_layout"
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:layout_marginBottom="0dp"
+        android:background="@color/transparent"
+        android:elevation="12dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/frameRecyclerView"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!--
+
+        <ImageButton
+            android:id="@+id/size_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_adjust_24px" />
+
+        -->
+
+        <ImageButton
+            android:id="@+id/palette_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_palette_24px" />
+
+
+        <ImageButton
+            android:id="@+id/layer_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/palette_button"
+            android:layout_toEndOf="@id/palette_button"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_layers_24px" />
+
+
+        <ImageButton
+            android:id="@+id/undo_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toLeftOf="@id/redo_button"
+            android:layout_toStartOf="@id/redo_button"
+            android:layout_marginEnd="0dp"
+            android:layout_marginRight="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_undo_24px" />
+
+        <ImageButton
+            android:id="@+id/redo_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_redo_24px" />
+
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/frame_button_linear_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="0dp"
+        android:background="@color/colorPrimaryDark"
+        android:elevation="12dp"
+        android:gravity="right"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="@+id/color_selection_container">
+
+        <ImageButton
+            android:id="@+id/onion_skin_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_flip_to_front_24px" />
+
+        <ImageButton
+            android:id="@+id/play_animation_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_play_arrow_24px" />
+
+        <ImageButton
+            android:id="@+id/swap_left_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_arrow_back_24px" />
+
+        <ImageButton
+            android:id="@+id/swap_right_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_arrow_forward_24px" />
+
+        <ImageButton
+            android:id="@+id/copy_frame_right_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_copyright_24px" />
+
+        <ImageButton
+            android:id="@+id/add_frame_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_add_24px" />
+
+        <ImageButton
+            android:id="@+id/delete_frame_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_baseline_delete_24px" />
+
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/color_selection_container"
+        android:elevation="50dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+</android.support.constraint.ConstraintLayout>
