@@ -7,6 +7,9 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.PorterDuff;
+import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -53,10 +56,8 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ProjectV
         projectFileHandler.attachToProject(context, projectID);
         holder.mTextView.setText(projectFileHandler.getTitle(projectID));
 
-        Bitmap bitmap = Bitmap.createBitmap(1920, 1080, Bitmap.Config.RGB_565);
-        Canvas canvas = new Canvas(bitmap);
-        canvas.drawColor(Color.MAGENTA);
-        holder.mImageView.setImageBitmap(bitmap);
+        projectFileHandler.loadSampledFrameIntoImageView(projectID, 0,
+                1, holder.mImageView);
 
 
         final ProjectAdapter adapter = this;

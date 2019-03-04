@@ -20,8 +20,6 @@ import android.widget.TextView;
 public class LayerAdapter extends RecyclerView.Adapter<LayerAdapter.LayerViewHolder> {
     private Context context;
     private Project project;
-    //fixme you don't need this, just make the background of the imageview white
-    // fixme then only use one rgb565 bitmap
     private Bitmap auxBitmap;
     private Canvas auxBitmapCanvas;
 
@@ -66,11 +64,6 @@ public class LayerAdapter extends RecyclerView.Adapter<LayerAdapter.LayerViewHol
             holder.mBackgroundImageView.setBackgroundColor(Color.TRANSPARENT);
         }
 
-        Bitmap bitmap = Bitmap.createBitmap(project.getWidth(), project.getHeight(), Bitmap.Config.RGB_565);
-        Canvas canvas = new Canvas(bitmap);
-        canvas.drawColor(Color.MAGENTA);
-        holder.mImageView.setImageBitmap(bitmap);
-
         final LayerViewHolder fHolder = holder;
         final int fPosition = position;
         class setImageViewTask extends AsyncTask<Void, Void, Void> {
@@ -78,7 +71,7 @@ public class LayerAdapter extends RecyclerView.Adapter<LayerAdapter.LayerViewHol
 
             @Override
             protected Void doInBackground(Void... params) {
-                int scale = 1;
+                int scale = 2;
                 viewBitmap = Bitmap.createBitmap(project.getWidth()/scale,
                         project.getHeight()/scale, Bitmap.Config.RGB_565);
                 Canvas viewBitmapCanvas = new Canvas(viewBitmap);

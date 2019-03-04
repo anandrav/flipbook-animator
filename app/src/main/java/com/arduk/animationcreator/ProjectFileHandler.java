@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -30,6 +29,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.UUID;
 
+import javax.security.auth.callback.Callback;
+
 public class ProjectFileHandler {
 
     private String projectID;
@@ -49,6 +50,8 @@ public class ProjectFileHandler {
     private Bitmap reusableAnimationBitmap2;
 
     private Canvas reusableCanvas2;
+
+    private int activityCount;
 
     // singleton pattern
     private static ProjectFileHandler instance;
@@ -71,18 +74,27 @@ public class ProjectFileHandler {
         handlerThread.start();
         htHandler = new Handler(handlerThread.getLooper());
         uiHandler = new Handler(Looper.getMainLooper());
+
+        activityCount = 0;
+    }
+
+    public boolean hasActiveRunnable() {
+        return activityCount > 0;
     }
 
     // Secondary Thread with Callback Methods, take much time //
 
     public void loadBitmapIntoDrawSheet(final Context context, final String projectID, final int frameID,
                                         final int layerID, final DrawSheet drawSheet) {
+        activityCount += 1;
+
+        final ProjectReaderWriter fProjectReaderWriter = projectReaderWriter;
         htHandler.post(new Runnable() {
             @Override
             public void run() {
-                int width = projectReaderWriter.loadWidth();
-                int height = projectReaderWriter.loadHeight();
-                final Bitmap bitmap = projectReaderWriter.loadSheetBitmap(frameID, layerID,
+                int width = fProjectReaderWriter.loadWidth();
+                int height = fProjectReaderWriter.loadHeight();
+                final Bitmap bitmap = fProjectReaderWriter.loadSheetBitmap(frameID, layerID,
                         width, height, null);
 
                 uiHandler.post(new Runnable() {
@@ -90,6 +102,7 @@ public class ProjectFileHandler {
                     public void run() {
                         drawSheet.activate(bitmap);
                         ((ProjectEditorActivity)context).onDrawSheetActivated(frameID, layerID);
+                        activityCount -= 1;
                     }
                 });
             }
@@ -98,8 +111,11 @@ public class ProjectFileHandler {
 
     public void loadSampledFrameIntoImageView(final String projectID, final int frameID,
                                               final int inSample, final ImageView imageView) {
-        final int width = getWidth(projectID);
-        final int height = getHeight(projectID);
+        activityCount += 1;
+
+        final ProjectReaderWriter fProjectReaderWriter = projectReaderWriter;
+        final int width = getWidth(projectID)/inSample;
+        final int height = getHeight(projectID)/inSample;
         final Bitmap viewBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         htHandler.post(new Runnable() {
             @Override
@@ -107,9 +123,9 @@ public class ProjectFileHandler {
                 Canvas viewBitmapCanvas = new Canvas(viewBitmap);
                 viewBitmapCanvas.drawColor(Color.WHITE);
 
-                for (int layer = projectReaderWriter.loadNumLayers() - 1; layer >= 0; --layer) {
-                    Bitmap layerBitmap = projectReaderWriter.loadSheetBitmap(frameID, layer,
-                            width/inSample, height/inSample, null);
+                for (int layer = fProjectReaderWriter.loadNumLayers() - 1; layer >= 0; --layer) {
+                    Bitmap layerBitmap = fProjectReaderWriter.loadSheetBitmap(frameID, layer,
+                            width, height, null);
                     viewBitmapCanvas.drawBitmap(layerBitmap, 0, 0, null);
                 }
 
@@ -117,21 +133,122 @@ public class ProjectFileHandler {
                     @Override
                     public void run() {
                         imageView.setImageBitmap(viewBitmap);
+                        activityCount -= 1;
                     }
                 });
             }
         });
     }
 
+//    public void loadSampledFrameIntoImageViewAndDrawView(final String projectID, final int frameID,
+//                                              final int inSample, final ImageView imageView,
+//                                                         final DrawView drawView) {
+//        activityCount += 1;
+//
+//        final ProjectReaderWriter fProjectReaderWriter = projectReaderWriter;
+//        final int width = getWidth(projectID)/inSample;
+//        final int height = getHeight(projectID)/inSample;
+//        final Bitmap viewBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+//        htHandler.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                Canvas viewBitmapCanvas = new Canvas(viewBitmap);
+//                viewBitmapCanvas.drawColor(Color.WHITE);
+//
+//                for (int layer = fProjectReaderWriter.loadNumLayers() - 1; layer >= 0; --layer) {
+//                    Bitmap layerBitmap = fProjectReaderWriter.loadSheetBitmap(frameID, layer,
+//                            width, height, null);
+//                    viewBitmapCanvas.drawBitmap(layerBitmap, 0, 0, null);
+//                }
+//
+//                uiHandler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        imageView.setImageBitmap(viewBitmap);
+//                        drawView.invalidateWithBitmap(viewBitmap);
+//                    }
+//                });
+//            }
+//        });
+//    }
+
     public void saveDrawSheetToStorage(final String projectID, final int frameID, final int layerID,
                                        final DrawSheet drawSheet) {
+        activityCount += 1;
+
+        final ProjectReaderWriter fProjectReaderWriter = projectReaderWriter;
         htHandler.post(new Runnable() {
             @Override
             public void run() {
-                projectReaderWriter.saveSheetBitmap(drawSheet.getBitmap(), frameID, layerID);
+                fProjectReaderWriter.saveSheetBitmap(drawSheet.getBitmap(), frameID, layerID);
+
+                uiHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        activityCount -= 1;
+                    }
+                });
             }
         });
     }
+
+//    public void loadBitmapIntoDrawSheet(final Context context, final String projectID, final int frameID,
+//                                        final int layerID, final DrawSheet drawSheet) {
+//        htHandler.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                int width = projectReaderWriter.loadWidth();
+//                int height = projectReaderWriter.loadHeight();
+//                final Bitmap bitmap = projectReaderWriter.loadSheetBitmap(frameID, layerID,
+//                        width, height, null);
+//
+//                uiHandler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        drawSheet.activate(bitmap);
+//                        ((ProjectEditorActivity)context).onDrawSheetActivated(frameID, layerID);
+//                    }
+//                });
+//            }
+//        });
+//    }
+//
+//    public void loadSampledFrameIntoImageView(final String projectID, final int frameID,
+//                                              final int inSample, final ImageView imageView) {
+//        final int width = getWidth(projectID);
+//        final int height = getHeight(projectID);
+//        final Bitmap viewBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+//        htHandler.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                Canvas viewBitmapCanvas = new Canvas(viewBitmap);
+//                viewBitmapCanvas.drawColor(Color.WHITE);
+//
+//                for (int layer = projectReaderWriter.loadNumLayers() - 1; layer >= 0; --layer) {
+//                    Bitmap layerBitmap = projectReaderWriter.loadSheetBitmap(frameID, layer,
+//                            width/inSample, height/inSample, null);
+//                    viewBitmapCanvas.drawBitmap(layerBitmap, 0, 0, null);
+//                }
+//
+//                uiHandler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        imageView.setImageBitmap(viewBitmap);
+//                    }
+//                });
+//            }
+//        });
+//    }
+//
+//    public void saveDrawSheetToStorage(final String projectID, final int frameID, final int layerID,
+//                                       final DrawSheet drawSheet) {
+//        htHandler.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                projectReaderWriter.saveSheetBitmap(drawSheet.getBitmap(), frameID, layerID);
+//            }
+//        });
+//    }
 
     // UI Thread methods, take little time //
 
@@ -211,6 +328,26 @@ public class ProjectFileHandler {
         return fps;
     }
 
+    public int getBrushColor() {
+        return projectReaderWriter.loadBrushColor();
+    }
+
+    public int getBrushRadius() {
+        return projectReaderWriter.loadBrushRadius();
+    }
+
+    public int getBrushAlpha() {
+        return projectReaderWriter.loadBrushAlpha();
+    }
+
+    public int getEraserRadius() {
+        return projectReaderWriter.loadEraserRadius();
+    }
+
+    public int getEraserAlpha() {
+        return projectReaderWriter.loadEraserAlpha();
+    }
+
     public int getNumFrames(String projectID) {
 //        sleepHandlerThread();
         int numFrames = projectReaderWriter.loadNumFrames();
@@ -263,6 +400,26 @@ public class ProjectFileHandler {
 //        sleepHandlerThread();
         projectReaderWriter.setFps(fps);
 //        wakeHandlerThread();
+    }
+
+    public void setBrushColor(int color) {
+        projectReaderWriter.setBrushColor(color);
+    }
+
+    public void setBrushRadius(int radius) {
+        projectReaderWriter.setBrushRadius(radius);
+    }
+
+    public void setBrushAlpha(int alpha) {
+        projectReaderWriter.setBrushAlpha(alpha);
+    }
+
+    public void setEraserRadius(int radius) {
+        projectReaderWriter.setEraserRadius(radius);
+    }
+
+    public void setEraserAlpha(int alpha) {
+        projectReaderWriter.setEraserAlpha(alpha);
     }
 
     public void setFrameOrder(String projectID, List<Integer> frameOrder) {
@@ -336,6 +493,11 @@ public class ProjectFileHandler {
         private static final int DEFAULT_NUM_FRAMES = 1;
         private static final int DEFAULT_NUM_LAYERS = 1;
         private static final int DEFAULT_FPS = 24;
+        private static final int DEFAULT_BRUSH_COLOR = Color.BLACK;
+        private static final int DEFAULT_BRUSH_RADIUS = 8;
+        private static final int DEFAULT_BRUSH_ALPHA = 255;
+        private static final int DEFAULT_ERASER_RADIUS = 120;
+        private static final int DEFAULT_ERASER_ALPHA = 255;
 
         private static final int COMPRESS_QUALITY = 100;
 
@@ -440,14 +602,14 @@ public class ProjectFileHandler {
             try {
                 FileOutputStream out = new FileOutputStream(bitmapFile);
                 bitmap.compress(Bitmap.CompressFormat.PNG, COMPRESS_QUALITY, out);
-                Log.v("ProjectReaderWriter", "bitmap compressed");
+                Log.v("ProjectReaderWriter", "bitmap compressed at " + bitmapFile.getAbsolutePath());
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        public String loadTitle() {
-            String title = "";
+        public synchronized String loadTitle() {
+            String title = DEFAULT_TITLE;
             try {
                 title = getConfig().getString("title");
             } catch (JSONException e) {
@@ -457,7 +619,7 @@ public class ProjectFileHandler {
         }
 
         public int loadWidth() {
-            int width = 0;
+            int width = DEFAULT_WIDTH;
             try {
                 width = getConfig().getInt("width");
             } catch (JSONException e) {
@@ -467,7 +629,7 @@ public class ProjectFileHandler {
         }
 
         public int loadHeight() {
-            int height = 0;
+            int height = DEFAULT_HEIGHT;
             try {
                 height = getConfig().getInt("height");
             } catch (JSONException e) {
@@ -484,6 +646,56 @@ public class ProjectFileHandler {
                 e.printStackTrace();
             }
             return fps;
+        }
+
+        public int loadBrushColor() {
+            int brushColor = DEFAULT_BRUSH_COLOR;
+            try {
+                brushColor = getConfig().getInt("brushColor");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return brushColor;
+        }
+
+        public int loadBrushRadius() {
+            int brushRadius = DEFAULT_BRUSH_RADIUS;
+            try {
+                brushRadius = getConfig().getInt("brushRadius");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return brushRadius;
+        }
+
+        public int loadBrushAlpha() {
+            int brushAlpha = DEFAULT_BRUSH_ALPHA;
+            try {
+                brushAlpha = getConfig().getInt("brushAlpha");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return brushAlpha;
+        }
+
+        public int loadEraserRadius() {
+            int eraserRadius = DEFAULT_ERASER_RADIUS;
+            try {
+                eraserRadius = getConfig().getInt("eraserRadius");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return eraserRadius;
+        }
+
+        public int loadEraserAlpha() {
+            int eraserAlpha = DEFAULT_ERASER_ALPHA;
+            try {
+                eraserAlpha = getConfig().getInt("eraserAlpha");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return eraserAlpha;
         }
 
         public int loadNumFrames() {
@@ -549,6 +761,16 @@ public class ProjectFileHandler {
         public void setFps(int fps) {
             putToConfig("fps", fps);
         }
+
+        public void setBrushColor(int color) { putToConfig("brushColor", color); }
+
+        public void setBrushRadius(int radius) { putToConfig("brushRadius", radius); }
+
+        public void setBrushAlpha(int alpha) { putToConfig("brushAlpha", alpha); }
+
+        public void setEraserRadius(int radius) { putToConfig("eraserRadius", radius); }
+
+        public void setEraserAlpha(int alpha) { putToConfig("eraserAlpha", alpha); }
 
         public void setFrameOrder(List<Integer> frameOrder) {
             JSONArray jArray = new JSONArray();
@@ -781,6 +1003,11 @@ public class ProjectFileHandler {
                 jsonObject.put("fps", DEFAULT_FPS);
                 jsonObject.put("numFrames", DEFAULT_NUM_FRAMES);
                 jsonObject.put("numLayers", DEFAULT_NUM_LAYERS);
+                jsonObject.put("brushRadius", DEFAULT_BRUSH_RADIUS);
+                jsonObject.put("brushColor", DEFAULT_BRUSH_COLOR);
+                jsonObject.put("brushAlpha", DEFAULT_BRUSH_ALPHA);
+                jsonObject.put("eraserRadius", DEFAULT_ERASER_RADIUS);
+                jsonObject.put("eraserAlpha", DEFAULT_ERASER_ALPHA);
                 JSONArray zero = new JSONArray();
                 zero.put(0);
                 jsonObject.put("frameOrder", zero);

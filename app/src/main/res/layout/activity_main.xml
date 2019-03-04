@@ -17,7 +17,7 @@
         android:background="#FFFFFF"
         android:elevation="10dp"
         android:paddingVertical="6dp"
-        android:text="Projects"
+        android:text="My Flipbooks"
         android:textAlignment="center"
         android:textSize="36sp" />
 

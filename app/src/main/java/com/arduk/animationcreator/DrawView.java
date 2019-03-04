@@ -186,6 +186,14 @@ public class DrawView extends View {
         animationBitmap = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
         animationBitmapCanvas = new Canvas(animationBitmap);
 
+        brushPaint.setColor(projectFileHandler.getBrushColor());
+        brushPaint.setStrokeWidth(projectFileHandler.getBrushRadius());
+        brushPaint.setAlpha(projectFileHandler.getBrushAlpha());
+
+        eraserPaint.setStrokeWidth(projectFileHandler.getEraserRadius());
+        // this doesn't appear to do anything
+        eraserPaint.setAlpha(projectFileHandler.getEraserAlpha());
+
         updateDisplayBitmap();
         invalidate();
     }
@@ -271,6 +279,11 @@ public class DrawView extends View {
         displayBitmapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
         displayBitmapCanvas.drawBitmap(bitmap, 0, 0, displayPaint);
+    }
+
+    public void invalidateWithBitmap(Bitmap bitmap) {
+        updateDisplayBitmap(bitmap);
+        invalidate();
     }
 
 //    private void updateDisplayBitmapLazy(Rect rect) {
@@ -573,7 +586,7 @@ public class DrawView extends View {
                         updateDisplayBitmap(bitmap);
                     }
 
-                    Log.i("animating framePos:  ", Integer.toString(playbackFrame));
+                    Log.v("animating framePos:  ", Integer.toString(playbackFrame));
 
                     moveNextFrame();
                     //delay should account for time to do stuff

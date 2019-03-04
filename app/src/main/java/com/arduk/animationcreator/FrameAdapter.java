@@ -9,10 +9,16 @@ import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SnapHelper;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -20,6 +26,9 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
     private Context context;
     private Project project;
     private ProjectFileHandler projectFileHandler;
+    private RecyclerView mRecyclerView;
+    private RecyclerView.LayoutManager layoutManager;
+    private int itemOffset;
 
     public static class FrameViewHolder extends RecyclerView.ViewHolder {
         private ImageView mBackgroundImageView;
@@ -34,12 +43,26 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
         }
     }
 
-    public FrameAdapter(Context context, Project project) {
+    public FrameAdapter(Context context, Project project,
+                        RecyclerView.LayoutManager layoutManager) {
         this.context = context;
         this.project = project;
+        this.itemOffset = 0;
+        this.layoutManager = layoutManager;
         projectFileHandler = ProjectFileHandler.getInstance();
         int width = project.getWidth();
         int height = project.getHeight();
+    }
+
+    @Override
+    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+
+        mRecyclerView = recyclerView;
+    }
+
+    public void setItemOffset(int itemOffset) {
+        this.itemOffset = itemOffset;
     }
 
     @NonNull
@@ -55,11 +78,11 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
         holder.mTextView.setText(Integer.toString(position + 1));
 
         //highlight if the currentFrame
-        if (position == project.getSelectedFrame()) {
-            holder.mBackgroundImageView.setBackgroundColor(Color.RED);
-        } else {
-            holder.mBackgroundImageView.setBackgroundColor(Color.rgb(120, 120, 120));
-        }
+//        if (position == project.getSelectedFrame()) {
+//            holder.mBackgroundImageView.setBackgroundColor(Color.RED);
+//        } else {
+//            holder.mBackgroundImageView.setBackgroundColor(Color.rgb(120, 120, 120));
+//        }
 
         Bitmap bitmap = Bitmap.createBitmap(project.getWidth(), project.getHeight(), Bitmap.Config.RGB_565);
         Canvas canvas = new Canvas(bitmap);
@@ -67,7 +90,7 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
         holder.mImageView.setImageBitmap(bitmap);
 
         final FrameViewHolder fHolder = holder;
-
+        final int SCALE = 1;
         int frameID = project.framePosToID(position);
         if (project.hasFrameCached(frameID)) {
             canvas.drawColor(Color.WHITE);
@@ -77,19 +100,40 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
             holder.mImageView.setImageBitmap(bitmap);
         } else {
             projectFileHandler.loadSampledFrameIntoImageView(project.getProjectID(), frameID,
-                    1, holder.mImageView);
+                    SCALE, holder.mImageView);
         }
 
         final FrameAdapter adapter = this;
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int previousSelected = project.getSelectedFrame();
-                int pos = fHolder.getLayoutPosition();
-                project.selectFrame(pos);
-                ((ProjectEditorActivity)context).onFrameSelected();
-                adapter.notifyItemChanged(pos);
-                adapter.notifyItemChanged(previousSelected);
+//                int previousSelected = project.getSelectedFrame();
+//                int pos = fHolder.getLayoutPosition();
+//                project.selectFrame(pos);
+//                ((ProjectEditorActivity)context).onFrameSelected();
+//                adapter.notifyItemChanged(pos);
+//                adapter.notifyItemChanged(previousSelected);
+
+                //initiate a scroll to this position
+//                int position = fHolder.getLayoutPosition();
+//                ((LinearLayoutManager)layoutManager).scrollToPositionWithOffset(position, itemOffset);
+//                project.selectFrame(position);
+//                ((ProjectEditorActivity)context).onFrameSelected();
+
+//                Log.d("layout position", "layout position" + Integer.toString(fHolder.getLayoutPosition()));
+//                RecyclerView.SmoothScroller smoothScroller = new LinearSmoothScroller(mRecyclerView.getContext()) {
+//                    @Override
+//                    protected int getVerticalSnapPreference() {
+//                        return LinearSmoothScroller.SNAP_TO_ANY;
+//                    }
+//
+//                    @Override
+//                    protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
+//                        return 120f / displayMetrics.densityDpi;
+//                    }
+//                };
+//                smoothScroller.setTargetPosition(fHolder.getLayoutPosition());
+//                mRecyclerView.getLayoutManager().startSmoothScroll(smoothScroller);
             }
         });
     }

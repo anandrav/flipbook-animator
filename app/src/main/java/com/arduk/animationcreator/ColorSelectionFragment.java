@@ -214,7 +214,7 @@ public class ColorSelectionFragment extends Fragment {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 opacityText.setText(Integer.toString(progress) + "%");
                 alpha = (int)(progress * 2.55);
-                //((ProjectEditorActivity)getActivity()).setCurrentAlpha((int)alpha);
+                ((ProjectEditorActivity)getActivity()).setCurrentAlpha((int)alpha);
             }
 
             @Override
@@ -247,7 +247,7 @@ public class ColorSelectionFragment extends Fragment {
                     brushWidth = MIN_ERASER_SIZE + progress * ((MAX_ERASER_SIZE - MIN_ERASER_SIZE) / 100);
                 }
                 sizeText.setText(Integer.toString(Math.round(brushWidth)));
-                //((ProjectEditorActivity)getActivity()).setCurrentBrushSize(brushWidth);
+                ((ProjectEditorActivity)getActivity()).setCurrentBrushSize(brushWidth);
             }
 
             @Override
@@ -277,7 +277,7 @@ public class ColorSelectionFragment extends Fragment {
 
     private void updateIntent() {
         int intColor = Color.HSVToColor(hsv);
-        //((ProjectEditorActivity)getActivity()).setCurrentColor(intColor);
+        ((ProjectEditorActivity)getActivity()).setCurrentColor(intColor);
 
 //        Intent mIntent = new Intent();
 //        mIntent.putExtra("color", intColor);

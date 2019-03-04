@@ -1,18 +1,38 @@
 package com.arduk.animationcreator;
 
 import android.app.FragmentManager;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Point;
+import android.graphics.drawable.BitmapDrawable;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.LinearSnapHelper;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SimpleItemAnimator;
 import android.support.v7.widget.SnapHelper;
+import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.Log;
+import android.view.Display;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.view.WindowManager;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.Scroller;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Collections;
 
 
 public class ProjectEditorActivity extends AppCompatActivity /*implements View.OnClickListener*/ {
@@ -31,6 +51,8 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
     private RecyclerView frameRecyclerView;
     private RecyclerView.LayoutManager mFrameRecyclerViewLayoutManager;
     private FrameAdapter mFrameAdapter;
+    private int frameItemWidth = -1;
+    private int frameItemOffset = -1;
 
     /* layer editor stuff */
     private RecyclerView layerRecyclerView;
@@ -55,8 +77,7 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
             getFragmentManager().beginTransaction()
                     .hide(colorFragment)
                     .commit();
-        }
-        else {
+        } else {
             super.onBackPressed();
         }
     }
@@ -102,12 +123,141 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
         frameRecyclerView.setHasFixedSize(true);
         mFrameRecyclerViewLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
         frameRecyclerView.setLayoutManager(mFrameRecyclerViewLayoutManager);
-        mFrameAdapter = new FrameAdapter(this, project);
+        class FastLinearSnapHelper extends LinearSnapHelper {
+        }
+        final SnapHelper snapHelper = new FastLinearSnapHelper();
+        snapHelper.attachToRecyclerView(frameRecyclerView);
+        OffsetItemDecoration dividerItemDecoration = new OffsetItemDecoration(frameRecyclerView.getContext());
+        //frameRecyclerView.addItemDecoration(dividerItemDecoration);
+        mFrameAdapter = new FrameAdapter(this, project, mFrameRecyclerViewLayoutManager);
         frameRecyclerView.setAdapter(mFrameAdapter);
         //disable dim animation on item change
         ((SimpleItemAnimator) frameRecyclerView.getItemAnimator()).setSupportsChangeAnimations(false);
-        SnapHelper snapHelper = new LinearSnapHelper();
-        snapHelper.attachToRecyclerView(frameRecyclerView);
+        frameRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                if (frameRecyclerView.computeHorizontalScrollOffset() == 0) {
+                    //get cell width for animating the scrubbing preview
+                    if (frameItemWidth == -1) {
+                        View itemView = frameRecyclerView.findViewHolderForLayoutPosition(0).itemView;
+                        int itemWidth = itemView.getWidth();
+                        int itemMargins = ((ViewGroup.MarginLayoutParams) frameRecyclerView.findViewHolderForLayoutPosition(0).itemView.getLayoutParams()).leftMargin +
+                                ((ViewGroup.MarginLayoutParams) frameRecyclerView.findViewHolderForLayoutPosition(0).itemView.getLayoutParams()).rightMargin;
+                        frameItemWidth = itemWidth + itemMargins;
+                    }
+
+                    // get offset for recyclerview
+                    if (frameItemOffset == -1) {
+                        Log.d("offset", "CALCULATED OFFSET");
+                        View itemView = frameRecyclerView.findViewHolderForLayoutPosition(0).itemView;
+                        ImageView childImage = (ImageView) ((ViewGroup) itemView).getChildAt(0);
+                        int offset = (int) (getScreenWidth() / (float) (2)) - childImage.getLayoutParams().width / 2;
+                        offset -= ((ViewGroup.MarginLayoutParams) itemView.getLayoutParams()).leftMargin;
+                        frameItemOffset = offset;
+//                        frameRecyclerView.setPadding(offset, 0, offset, 0);
+
+                        // tell offset to frameAdapter
+                        mFrameAdapter.setItemOffset(offset);
+                    }
+                }
+            }
+        });
+        final Handler scrubbingHandler = new Handler();
+        frameRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                View centerView = snapHelper.findSnapView(mFrameRecyclerViewLayoutManager);
+                int pos = mFrameRecyclerViewLayoutManager.getPosition(centerView);
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    // if stopped scrolling then stop scrubbing preview runnable
+                    scrubbingHandler.removeCallbacksAndMessages(null);
+                    // if stopped scrolling then select frame
+                    int prevSelected = project.getSelectedFrame();
+                    project.selectFrame(pos);
+                    drawView.notifyFrameLayerSelection();
+                    //mFrameAdapter.notifyItemChanged(pos);
+                }
+                if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
+                    // if started scrolling then start scrubbing preview runnable
+                    Runnable r = new Runnable() {
+                        @Override
+                        public void run() {
+                            View centerView = snapHelper.findSnapView(mFrameRecyclerViewLayoutManager);
+                            int pos = mFrameRecyclerViewLayoutManager.getPosition(centerView);
+                            View itemView = frameRecyclerView.findViewHolderForLayoutPosition(pos).itemView;
+                            ImageView imageView = (ImageView)((ViewGroup)itemView).getChildAt(1);
+                            Bitmap previewBitmap = ((BitmapDrawable)imageView.getDrawable()).getBitmap();
+                            Log.d("scrubbingRunnable", "RAN!");
+                            drawView.invalidateWithBitmap(previewBitmap);
+                            final int UPDATE_PREVIEW_DELAY = 40;
+                            scrubbingHandler.postDelayed(this, UPDATE_PREVIEW_DELAY);
+                        }
+                    };
+                    scrubbingHandler.post(r);
+                }
+            }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+
+            }
+        });
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.Callback() {
+            int dragFrom = -1;
+            int dragTo = -1;
+
+            @Override
+            public int getMovementFlags(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+                final int dragFlags = ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
+                return makeMovementFlags(dragFlags, 0);
+            }
+
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                int position_dragged = viewHolder.getAdapterPosition();
+                int position_target = target.getAdapterPosition();
+                Log.d("dragged", "dragged: " + Integer.toString(position_dragged));
+                Log.d("dragged", "target: " + Integer.toString(position_target));
+
+                if (dragFrom == -1) {
+                    dragFrom = position_dragged;
+                }
+                dragTo = position_target;
+
+                project.swapFrames(position_dragged, position_target);
+                mFrameAdapter.notifyItemMoved(position_target, position_dragged);
+
+                return true;
+            }
+
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+
+            }
+
+            @Override
+            public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+
+//                if (dragFrom != -1 && dragTo != -1 && dragFrom != dragTo) {
+//                    reallyMoved(dragFrom, dragTo);
+//                }
+//                dragFrom = -1;
+//                dragTo = -1;
+                //alignWithSnap();
+            }
+
+            private void alignWithSnap() {
+                View centerView = snapHelper.findSnapView(mFrameRecyclerViewLayoutManager);
+                int pos = mFrameRecyclerViewLayoutManager.getPosition(centerView);
+                ((LinearLayoutManager)mFrameRecyclerViewLayoutManager)
+                        .scrollToPositionWithOffset(pos, frameItemOffset);
+                project.selectFrame(pos);
+                onFrameSelected();
+            }
+        });
+        itemTouchHelper.attachToRecyclerView(frameRecyclerView);
 
         // initialize layerRecyclerView
         layerRecyclerView = findViewById(R.id.layerRecyclerView);
@@ -213,7 +363,7 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
             @Override
             public void onClick(View v) {
                 project.insertFrame(project.getNumFrames());
-
+                mFrameAdapter.notifyItemChanged(project.getNumFrames()-2);
                 mFrameAdapter.notifyItemInserted(project.getNumFrames()-1);
             }
         });
@@ -233,6 +383,7 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
                 mFrameAdapter.notifyItemRemoved(selectedFrame);
                 mFrameAdapter.notifyItemRangeChanged(selectedFrame-1,
                         project.getNumFrames() - selectedFrame + 1);
+                drawView.notifyFrameLayerSelection();
             }
         });
 
@@ -240,9 +391,11 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
         addLayerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                project.insertLayer(project.getNumLayers());
+                if (project.getNumLayers() < 3) {
+                    project.insertLayer(project.getNumLayers());
 
-                mLayerAdapter.notifyItemInserted(project.getNumLayers()-1);
+                    mLayerAdapter.notifyItemInserted(project.getNumLayers() - 1);
+                }
             }
         });
 
@@ -258,6 +411,7 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
                     project.selectLayer(project.getNumLayers() - 1);
                 }
 
+                drawView.notifyFrameLayerSelection();
                 mLayerAdapter.notifyItemRemoved(selectedLayer);
                 mLayerAdapter.notifyItemRangeChanged(selectedLayer-1,
                         project.getNumLayers() - selectedLayer + 1);
@@ -274,7 +428,9 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
                     project.swapLayers(layer1, layer2);
                     project.selectLayer(layer2);
 
-                    mLayerAdapter.notifyDataSetChanged();
+                    mLayerAdapter.notifyItemMoved(layer1, layer2);
+                    mLayerAdapter.notifyItemChanged(layer1);
+                    mLayerAdapter.notifyItemChanged(layer2);
                     drawView.notifyFrameLayerSelection();
                 }
             }
@@ -290,7 +446,9 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
                     project.swapLayers(layer1, layer2);
                     project.selectLayer(layer1);
 
-                    mLayerAdapter.notifyDataSetChanged();
+                    mLayerAdapter.notifyItemMoved(layer1, layer2);
+                    mLayerAdapter.notifyItemChanged(layer1);
+                    mLayerAdapter.notifyItemChanged(layer2);
                     drawView.notifyFrameLayerSelection();
                 }
             }
@@ -306,7 +464,9 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
                     project.swapFrames(frame1, frame2);
                     project.selectFrame(frame2);
 
-                    mFrameAdapter.notifyDataSetChanged();
+                    mFrameAdapter.notifyItemMoved(frame1, frame2);
+                    mFrameAdapter.notifyItemChanged(frame1);
+                    mFrameAdapter.notifyItemChanged(frame2);
                     drawView.notifyFrameLayerSelection();
                 }
             }
@@ -322,7 +482,9 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
                     project.swapFrames(frame1, frame2);
                     project.selectFrame(frame2);
 
-                    mFrameAdapter.notifyDataSetChanged();
+                    mFrameAdapter.notifyItemMoved(frame2, frame1);
+                    mFrameAdapter.notifyItemChanged(frame1);
+                    mFrameAdapter.notifyItemChanged(frame2);
                     drawView.notifyFrameLayerSelection();
                 }
             }
@@ -337,7 +499,8 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
                 project.copyFrameToClipboard(project.getSelectedFrame());
                 project.pasteFrameFromClipboard(project.getSelectedFrame()+1);
 
-                mFrameAdapter.notifyDataSetChanged();
+                mFrameAdapter.notifyItemChanged(project.getNumFrames()-2);
+                mFrameAdapter.notifyItemInserted(project.getSelectedFrame()+1);
                 drawView.notifyFrameLayerSelection();
             }
         });
@@ -361,22 +524,29 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
 
     @Override
     protected void onStop() {
+
         super.onStop();
     }
 
-//    public void setCurrentColor(int color) {
-//        drawView.setColor(color);
-//        drawSequence.getProjectSyncer().setBrushColor(color);
-//    }
+    public void setCurrentColor(int color) {
+        drawView.setColor(color);
+        if (drawView.getCurrentTool() == DrawView.editorTool.brush) {
+            projectFileHandler.setBrushColor(color);
+        }
+    }
 
     public int getCurrentColor() {
         return drawView.getColor();
     }
 
-//    public void setCurrentAlpha(int alpha) {
-//        drawView.setAlphaValue(alpha);
-//        drawSequence.getProjectSyncer().setBrushAlpha(alpha);
-//    }
+    public void setCurrentAlpha(int alpha) {
+        drawView.setAlphaValue(alpha);
+        if (drawView.getCurrentTool() == DrawView.editorTool.brush) {
+            projectFileHandler.setBrushAlpha(alpha);
+        } else if (drawView.getCurrentTool() == DrawView.editorTool.eraser){
+            projectFileHandler.setEraserAlpha(alpha);
+        }
+    }
 
     public int getCurrentAlpha(){
         return drawView.getAlphaValue();
@@ -386,14 +556,14 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
         return drawView.getCurrentTool();
     }
 
-//    public void setCurrentBrushSize(float width) {
-//        drawView.setBrushWidth(width);
-//        if (drawView.getCurrentTool() == DrawView.editorTool.brush) {
-//            drawSequence.getProjectSyncer().setBrushWidth(width);
-//        } else {
-//            drawSequence.getProjectSyncer().setEraserWidth(width);
-//        }
-//    }
+    public void setCurrentBrushSize(float width) {
+        drawView.setBrushWidth(width);
+        if (drawView.getCurrentTool() == DrawView.editorTool.brush) {
+            projectFileHandler.setBrushRadius(Math.round(width));
+        } else if (drawView.getCurrentTool() == DrawView.editorTool.eraser){
+            projectFileHandler.setEraserRadius(Math.round(width));
+        }
+    }
 
     public float getCurrentBrushSize() {
         return drawView.getBrushWidth();
@@ -417,5 +587,14 @@ public class ProjectEditorActivity extends AppCompatActivity /*implements View.O
             projectFileHandler.attachToProject(this, projectID);
             project = new Project(this, projectID);
         }
+    }
+
+    private int getScreenWidth() {
+
+        WindowManager wm = (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+        return size.x;
     }
 }

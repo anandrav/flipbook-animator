@@ -119,7 +119,7 @@ public class DrawSheet {
         }
 
         if (matrix == null) {
-            for (int i = 0; i < editHistory.size(); ++i) {
+            for (int i = 0; i < editIndex; ++i) {
                 Path path = editHistory.get(i).getPath();
                 Paint paint = editHistory.get(i).getPaint();
                 canvas.drawPath(path, paint);
@@ -131,7 +131,7 @@ public class DrawSheet {
             matrix.getValues(f);
             float scale = f[Matrix.MSCALE_X];
 
-            for (int i = 0; i < editHistory.size(); ++i) {
+            for (int i = 0; i < editIndex; ++i) {
                 Path path = editHistory.get(i).getPath();
                 Paint paint = editHistory.get(i).getPaint();
                 path.transform(matrix);
@@ -154,7 +154,7 @@ public class DrawSheet {
             canvas.drawBitmap(permanentBitmap, scaleMatrix, null);
         }
 
-        for (int i = 0; i < editHistory.size(); ++i) {
+        for (int i = 0; i < editIndex; ++i) {
             Path path = editHistory.get(i).getPath();
             Paint paint = editHistory.get(i).getPaint();
             path.transform(scaleMatrix);
