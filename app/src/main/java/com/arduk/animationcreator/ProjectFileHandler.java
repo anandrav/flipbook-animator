@@ -123,7 +123,7 @@ public class ProjectFileHandler {
                 Canvas viewBitmapCanvas = new Canvas(viewBitmap);
                 viewBitmapCanvas.drawColor(Color.WHITE);
 
-                for (int layer = fProjectReaderWriter.loadNumLayers() - 1; layer >= 0; --layer) {
+                for (int layer = 0; layer < fProjectReaderWriter.loadNumLayers(); ++layer) {
                     Bitmap layerBitmap = fProjectReaderWriter.loadSheetBitmap(frameID, layer,
                             width, height, null);
                     viewBitmapCanvas.drawBitmap(layerBitmap, 0, 0, null);

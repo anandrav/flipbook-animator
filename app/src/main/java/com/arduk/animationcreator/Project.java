@@ -46,6 +46,9 @@ public class Project {
     // sheets are loaded into the cache based on their proximity to the selected frame
     public void selectFrame(int pos) {
         selectedFramePos = pos;
+        // put it in the cache immediately
+        int frameID = framePosToID(pos);
+        drawFrameCache.getDrawFrame(frameID);
     }
 
     public void selectLayer(int pos) {

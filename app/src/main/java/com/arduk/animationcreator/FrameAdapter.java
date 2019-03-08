@@ -16,6 +16,7 @@ import android.support.v7.widget.SnapHelper;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -28,7 +29,9 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
     private ProjectFileHandler projectFileHandler;
     private RecyclerView mRecyclerView;
     private RecyclerView.LayoutManager layoutManager;
-    private int itemOffset;
+    private View.OnClickListener onClickListener;
+    private int itemOffset = 0;
+    private int itemWidth = 0;
 
     public static class FrameViewHolder extends RecyclerView.ViewHolder {
         private ImageView mBackgroundImageView;
@@ -74,15 +77,35 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
     }
 
     @Override
-    public void onBindViewHolder(@NonNull FrameViewHolder holder, int position) {
-        holder.mTextView.setText(Integer.toString(position + 1));
+    public void onBindViewHolder(@NonNull FrameViewHolder holder, int input_position) {
+        if (input_position == 0 || input_position == getItemCount() - 1) {
+            //dummy elements to add a margins to recyclerview
+            //set width to the offset
+            ViewGroup.LayoutParams params = holder.mBackgroundImageView.getLayoutParams();
+            if (itemWidth == 0) {
+                itemWidth = params.width;
+            }
+            params.width = itemOffset;
+            holder.mBackgroundImageView.setLayoutParams(params);
+            //make it invisible
+            holder.mBackgroundImageView.setVisibility(View.INVISIBLE);
+            holder.mImageView.setVisibility(View.INVISIBLE);
+            holder.mTextView.setVisibility(View.INVISIBLE);
 
-        //highlight if the currentFrame
-//        if (position == project.getSelectedFrame()) {
-//            holder.mBackgroundImageView.setBackgroundColor(Color.RED);
-//        } else {
-//            holder.mBackgroundImageView.setBackgroundColor(Color.rgb(120, 120, 120));
-//        }
+            return;
+        }
+        //since views are reused, make sure view group is made normal
+        ViewGroup.LayoutParams params = holder.mBackgroundImageView.getLayoutParams();
+        params.width = itemWidth;
+        holder.mBackgroundImageView.setLayoutParams(params);
+        //make it visible now
+        holder.mBackgroundImageView.setVisibility(View.VISIBLE);
+        holder.mImageView.setVisibility(View.VISIBLE);
+        holder.mTextView.setVisibility(View.VISIBLE);
+
+        int position = input_position - 1;
+
+        holder.mTextView.setText(Integer.toString(position + 1));
 
         Bitmap bitmap = Bitmap.createBitmap(project.getWidth(), project.getHeight(), Bitmap.Config.RGB_565);
         Canvas canvas = new Canvas(bitmap);
@@ -94,7 +117,7 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
         int frameID = project.framePosToID(position);
         if (project.hasFrameCached(frameID)) {
             canvas.drawColor(Color.WHITE);
-            for (int layer = project.getNumLayers() - 1; layer >= 0; --layer) {
+            for (int layer = 0; layer < project.getNumLayers(); ++layer) {
                 project.drawSheetToCanvas(canvas, position, layer, null, null);
             }
             holder.mImageView.setImageBitmap(bitmap);
@@ -104,42 +127,12 @@ public class FrameAdapter extends RecyclerView.Adapter<FrameAdapter.FrameViewHol
         }
 
         final FrameAdapter adapter = this;
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-//                int previousSelected = project.getSelectedFrame();
-//                int pos = fHolder.getLayoutPosition();
-//                project.selectFrame(pos);
-//                ((ProjectEditorActivity)context).onFrameSelected();
-//                adapter.notifyItemChanged(pos);
-//                adapter.notifyItemChanged(previousSelected);
-
-                //initiate a scroll to this position
-//                int position = fHolder.getLayoutPosition();
-//                ((LinearLayoutManager)layoutManager).scrollToPositionWithOffset(position, itemOffset);
-//                project.selectFrame(position);
-//                ((ProjectEditorActivity)context).onFrameSelected();
-
-//                Log.d("layout position", "layout position" + Integer.toString(fHolder.getLayoutPosition()));
-//                RecyclerView.SmoothScroller smoothScroller = new LinearSmoothScroller(mRecyclerView.getContext()) {
-//                    @Override
-//                    protected int getVerticalSnapPreference() {
-//                        return LinearSmoothScroller.SNAP_TO_ANY;
-//                    }
-//
-//                    @Override
-//                    protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
-//                        return 120f / displayMetrics.densityDpi;
-//                    }
-//                };
-//                smoothScroller.setTargetPosition(fHolder.getLayoutPosition());
-//                mRecyclerView.getLayoutManager().startSmoothScroll(smoothScroller);
-            }
-        });
+        View.OnClickListener listener = ((ProjectEditorActivity)context).new showFrameButtonsOnClickListener(position);
+        holder.itemView.setOnClickListener(listener);
     }
 
     @Override
     public int getItemCount() {
-        return project.getNumFrames();
+        return project.getNumFrames() + 2;
     }
 }

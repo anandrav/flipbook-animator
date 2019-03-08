@@ -1,7 +1,6 @@
 package com.arduk.animationcreator;
 
 import android.app.Fragment;
-import android.app.FragmentManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -40,7 +39,7 @@ public class ColorSelectionFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.activity_color_selection, container, false);
+        View view = inflater.inflate(R.layout.fragment_color_selection, container, false);
 
         MIN_BRUSH_SIZE = ((ProjectEditorActivity)getActivity()).MIN_BRUSH_SIZE;
         MAX_BRUSH_SIZE = ((ProjectEditorActivity)getActivity()).MAX_BRUSH_SIZE;

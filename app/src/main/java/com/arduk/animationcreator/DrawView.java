@@ -34,7 +34,7 @@ public class DrawView extends View {
     private Matrix editWindowMatrix; //matrix for storing translations and scales made to the edit window
     private Matrix utilMatrix;
 
-    private final static float mMinZoom = 0.7f;
+    private final static float mMinZoom = 0.3f;
     private final static float mMaxZoom = 15.f;
 
     private final static int MIN_EDIT_PATH_LENGTH = 100;
@@ -225,23 +225,29 @@ public class DrawView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        //fill canvas with solid color (light gray)
+        // DRAW canvas with solid color (light gray)
         canvas.drawColor(Color.rgb(225, 225, 225));
 
-        //DRAW border around canvas
+        // DRAW border around canvas
         canvas.drawRect(editWindowRect, borderPaint);
 
-        //DRAW background behind drawLayer
+        // DRAW background behind drawLayer
         canvas.drawRect(editWindowRect, backgroundPaint);
 
-        //DRAW the display bitmap
+        // DRAW the display bitmap
         canvas.drawBitmap(displayBitmap, null, editWindowRect, displayPaint);
 
-        // draw circle for eraser
+        // DRAW circle for eraser
+        // scale border paint when drawing eraser border, make thinner but don't make thicker
+        if (getCurrentZoom() < 1) {
+            borderPaint.setStrokeWidth(borderWidth * getCurrentZoom());
+        }
         if (currentTool == editorTool.eraser && mCanvasState == CanvasState.DRAW) {
             canvas.drawCircle(lastEventPoint.x, lastEventPoint.y,
                     eraserPaint.getStrokeWidth() * getCurrentZoom()/2, borderPaint);
         }
+        // set border paint back to normal after
+        borderPaint.setStrokeWidth(borderWidth);
     }
 
     private void updateDisplayBitmap() {
@@ -253,7 +259,7 @@ public class DrawView extends View {
         if (isOnionSkinning) {
             for (int frame = project.getSelectedFrame() - onionSkinBackward;
                  frame < project.getSelectedFrame() && frame >= 0; ++frame) {
-                for (int layer = project.getNumLayers()-1; layer >= 0; --layer) {
+                for (int layer = 0; layer < project.getNumLayers(); ++layer) {
                     Bitmap bitmap = project.getDrawSheetObject(frame, layer).getBitmap();
                     if (bitmap != null) {
                         displayBitmapCanvas.drawBitmap(bitmap, 0, 0, onionSkinPaint);
@@ -263,7 +269,7 @@ public class DrawView extends View {
         }
 
         int frame = project.getSelectedFrame();
-        for (int layer = project.getNumLayers() - 1; layer >= 0; --layer) {
+        for (int layer = 0; layer < project.getNumLayers(); ++layer) {
             auxiliaryBitmapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
             project.drawSheetToCanvas(auxiliaryBitmapCanvas, frame, layer, null, null);
             if (layer == project.getSelectedLayer()) {
@@ -418,6 +424,7 @@ public class DrawView extends View {
                         //drawSequence.getSelectedFrameObject().getSheet(drawSequence.getLayerOrder().get(drawSequence.getSelectedLayer())).makeEdit(currentEdit, editWindowMatrix);
                         deTransformPath(currentEdit.getPath());
                         project.makeEdit(currentEdit);
+                        ((ProjectEditorActivity)context).onEditMade();
                         reTransformPath(currentEdit.getPath());
                         updateDisplayBitmap();
                     }
